@@ -1,5 +1,10 @@
-#pragma once
+#ifndef _ACTOR_H_
+#define _ACTOR_H_
+
 #include "Geometry.h"
+#include "Mesh.h"
+#include "Texture.h"
+#include "Renderer.h"
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
@@ -23,9 +28,8 @@ public:
 			  staticFriction(a_staticFriction), dynamicFriction(a_dynamicFriction) {}
 	};
 
-	typedef Geometry::Texture Texture;
-
 	Actor(const Geometry& a_geometry,
+		  const Mesh& a_mesh,
 		  bool a_dynamic = false,
 		  const Material& a_material = Material(),
 		  const Texture& a_texture = Texture(),
@@ -34,12 +38,13 @@ public:
 		  float a_mass = 0.0f,
 		  const glm::mat3& a_inertiaTensor = glm::mat3(0),
 		  float a_minSpeed = 0.1f,
-		  float a_minAngularSpeed = 0.1f)
-		: m_texture(a_texture), m_geometry(a_geometry.Clone()), m_dynamic(a_dynamic),
+		  float a_minAngularSpeed = 0.05f)
+		: m_mesh(a_mesh), m_texture(a_texture), m_geometry(a_geometry.Clone()), m_dynamic(a_dynamic),
 		  m_material(a_material), m_velocity(a_velocity), m_angularVelocity(a_angularVelocity),
 		  m_mass(a_mass), m_inertiaTensor(a_inertiaTensor), m_force(0), m_torque(0),
 		  m_minSpeed2(a_minSpeed * a_minSpeed), m_minAngularSpeed2(a_minAngularSpeed * a_minAngularSpeed) {}
 	Actor(const Geometry& a_geometry,
+		  const Mesh& a_mesh,
 		  const Material& a_material,
 		  const Texture& a_texture = Texture(),
 		  const glm::vec3& a_velocity = glm::vec3(0),
@@ -47,21 +52,16 @@ public:
 		  float a_mass = 0.0f,
 		  const glm::mat3& a_inertiaTensor = glm::mat3(0),
 		  float a_minSpeed = 0.1f,
-		  float a_minAngularSpeed = 0.1f)
-		: m_texture(a_texture), m_geometry(a_geometry.Clone()), m_dynamic(true),
+		  float a_minAngularSpeed = 0.05f)
+		: m_mesh(a_mesh), m_texture(a_texture), m_geometry(a_geometry.Clone()), m_dynamic(true),
 		  m_material(a_material), m_velocity(a_velocity), m_angularVelocity(a_angularVelocity),
 		  m_mass(a_mass), m_inertiaTensor(a_inertiaTensor), m_force(0), m_torque(0),
 		  m_minSpeed2(a_minSpeed * a_minSpeed), m_minAngularSpeed2(a_minAngularSpeed * a_minAngularSpeed) {}
 	~Actor() { delete m_geometry; m_geometry = nullptr; }
 
-	virtual void Update(float a_deltaTime, const glm::vec3& a_gravity = glm::vec3(0));
-	virtual void Draw()
-	{
-		m_geometry->Render(m_texture);
-	}
+	virtual void Update(double a_deltaTime, const glm::vec3& a_gravity = glm::vec3(0));
+	void QueueMesh() const { Renderer::QueueMesh(m_mesh, m_texture, m_geometry->modelMatrix()); }
 
-	const glm::vec4& GetColor() const { return m_texture.color; }
-	void SetColor(const glm::vec4& a_color) { m_texture.color = a_color; }
 	const glm::vec3& GetPosition() const { return m_geometry->position; }
 	const glm::quat& GetOrientation() const { return m_geometry->orientation(); }
 	const Geometry& GetGeometry() const { return *m_geometry; }
@@ -133,6 +133,7 @@ protected:
 
 	glm::vec4 m_color;
 	Geometry* m_geometry;
+	Mesh m_mesh;
 	bool m_dynamic;
 	float m_mass;
 	glm::mat3 m_inertiaTensor;
@@ -145,3 +146,5 @@ protected:
 	float m_minSpeed2;
 	float m_minAngularSpeed2;
 };
+
+#endif	// _ACTOR_H_

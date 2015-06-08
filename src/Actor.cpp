@@ -1,6 +1,6 @@
 #include "Actor.h"
 
-void Actor::Update(float a_deltaTime, const glm::vec3& a_gravity)
+void Actor::Update(double a_deltaTime, const glm::vec3& a_gravity)
 {
 	if (nullptr != m_geometry)
 	{
@@ -109,39 +109,6 @@ void Actor::ResolveCollision(Actor* a_actor1, Actor* a_actor2)
 			a_actor1->ApplyImpulse(Jtan, collision.point);
 		if (a_actor2->IsDynamic())
 			a_actor2->ApplyImpulse(-Jtan, collision.point);
-
-		/*
-		// collision force
-		glm::vec3 v1 = collision.normal * glm::dot(collision.normal, a_actor1->GetVelocity());
-		glm::vec3 v2 = collision.normal * glm::dot(collision.normal, a_actor2->GetVelocity());
-		glm::vec3 dv = v2 - v1;
-		//glm::vec3 surfaceDV = (a_actor2->GetPointVelocity(collision.point) - v2) -
-		//					  (a_actor1->GetPointVelocity(collision.point) - v1);
-		//surfaceDV -= collision.normal * glm::dot(collision.normal, surfaceDV);
-		float m = (!a_actor2->IsDynamic() ? a_actor1->GetMass() :
-				   !a_actor1->IsDynamic() ? a_actor2->GetMass() :
-				   a_actor1->GetMass() * a_actor2->GetMass() / (a_actor1->GetMass() + a_actor2->GetMass()));
-		glm::vec3 f = dv * (fmin(a_actor1->m_material.elasticity, a_actor2->m_material.elasticity) + 1) * m;
-		if (a_actor1->IsDynamic())
-			a_actor1->ApplyImpulse(f, collision.point);
-		if (a_actor2->IsDynamic())
-			a_actor2->ApplyImpulse(-f, collision.point);
-
-		// friction force
-		glm::vec3 surfaceDV = a_actor2->GetPointVelocity(collision.point) -
-							  a_actor1->GetPointVelocity(collision.point);
-		surfaceDV -= collision.normal * glm::dot(collision.normal, surfaceDV);
-		if (glm::length2(surfaceDV * m) >
-			glm::length2(f * 0.5f * (a_actor1->m_material.staticFriction +
-									 a_actor2->m_material.staticFriction)))
-		{
-			glm::vec3 friction = -surfaceDV * glm::length(f) * 0.5f * (a_actor1->m_material.dynamicFriction +
-																	   a_actor2->m_material.dynamicFriction);
-			if (a_actor1->IsDynamic())
-				a_actor1->ApplyImpulse(friction, collision.point);
-			if (a_actor2->IsDynamic())
-				a_actor2->ApplyImpulse(-friction, collision.point);
-		}/**/
 	}
 }
 

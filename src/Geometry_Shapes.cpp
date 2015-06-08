@@ -4,21 +4,17 @@
 // Plane
 //
 
-Geometry::Plane::Plane(unsigned int a_increments, float a_size,
-					   const glm::vec3& a_origin,
+Geometry::Plane::Plane(const glm::vec3& a_origin,
 					   const glm::vec3& a_normal,
 					   const glm::vec3& a_verticalAxis)
-	: Geometry(a_origin, glm::orientation(a_normal, a_verticalAxis), PLANE),
-	  increments(a_increments), size(a_size) {}
-Geometry::Plane::Plane(unsigned int a_increments, float a_size,
-					   const glm::vec3& a_origin,
+	: Geometry(a_origin, glm::orientation(a_normal, a_verticalAxis), PLANE) {}
+Geometry::Plane::Plane(const glm::vec3& a_origin,
 					   const glm::quat& a_orientation)
-	: Geometry(a_origin, a_orientation, PLANE),
-	  increments(a_increments), size(a_size) {}
+	: Geometry(a_origin, a_orientation, PLANE) {}
 
 Geometry* Geometry::Plane::Clone() const
 {
-	return new Plane(increments, size, position, orientation());
+	return new Plane(position, orientation());
 }
 glm::vec3 Geometry::Plane::ClosestSurfacePointTo(const glm::vec3& a_point,
 												 glm::vec3* a_normal) const

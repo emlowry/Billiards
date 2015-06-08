@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "Renderer.h"
 #include <GL/glew.h>
 #include <glfw/glfw3.h>
 #include <stack>
@@ -11,8 +12,8 @@ namespace Engine
 	// TIME
 	//
 
-	static float sg_elapsedTime = 0;
-	static float sg_deltaTime = 0;
+	static double sg_elapsedTime = 0;
+	static double sg_deltaTime = 0;
 
 	static void ResetTime()
 	{
@@ -22,13 +23,13 @@ namespace Engine
 
 	static void Tick()
 	{
-		float time = glfwGetTime();
+		double time = glfwGetTime();
 		sg_deltaTime = time - sg_elapsedTime;
-		sg_deltaTime = time;
+		sg_elapsedTime = time;
 	}
 
-	float Engine::GetElapsedTime() { return sg_elapsedTime; }
-	float Engine::GetDeltaTime() { return sg_deltaTime; }
+	double Engine::GetElapsedTime() { return sg_elapsedTime; }
+	double Engine::GetDeltaTime() { return sg_deltaTime; }
 
 
 	//
@@ -38,7 +39,7 @@ namespace Engine
 	static GLFWwindow* sg_window = nullptr;
 	GLFWwindow* GetWindow() { return sg_window; }
 
-	static glm::vec2 sg_windowSize = glm::vec2(1280, 760);
+	static glm::vec2 sg_windowSize = glm::vec2(DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);
 	static std::string sg_windowTitle = "My Game";
 
 	static void CreateWindow()
@@ -82,14 +83,10 @@ namespace Engine
 	// TRANSFORMS
 	//
 
-	const glm::mat4 IDENTITY_MATRIX = glm::mat4(1, 0, 0, 0,
-												0, 1, 0, 0,
-												0, 0, 1, 0,
-												0, 0, 0, 1);
-
 	typedef std::stack<glm::mat4> MatrixStack;
 	static MatrixStack sg_projectionMatrix;
 	static MatrixStack sg_viewMatrix;
+	static glm::mat4 sg_projectionViewMatrix = IDENTITY_MATRIX;
 
 	static void ResetMatrices()
 	{
@@ -97,7 +94,10 @@ namespace Engine
 			sg_projectionMatrix.pop();
 		while (!sg_viewMatrix.empty())
 			sg_viewMatrix.pop();
+		sg_projectionViewMatrix = IDENTITY_MATRIX;
 	}
+	const glm::mat4& GetProjectionViewMatrix() { return sg_projectionViewMatrix; }
+	static void RecalculateProjectionView() { sg_projectionViewMatrix = GetProjectionMatrix() * GetViewMatrix(); }
 
 	static const glm::mat4& Get(MatrixStack& a_stack)
 	{
@@ -106,11 +106,16 @@ namespace Engine
 	static void Push(MatrixStack& a_stack, const glm::mat4 a_data = IDENTITY_MATRIX)
 	{
 		a_stack.push(a_data);
+		RecalculateProjectionView();
 	}
 	static glm::mat4 Pop(MatrixStack& a_stack)
 	{
 		glm::mat4 data = Get(a_stack);
-		a_stack.pop();
+		if (!a_stack.empty())
+		{
+			a_stack.pop();
+			RecalculateProjectionView();
+		}
 		return data;
 	}
 	static glm::mat4 Swap(MatrixStack& a_stack, const glm::mat4 a_data = IDENTITY_MATRIX)
@@ -130,14 +135,14 @@ namespace Engine
 	glm::mat4 SwapMatrix(Matrix a_matrix, const glm::mat4& a_data)	{ return Swap(GetStack(a_matrix), a_data); }
 
 	const glm::mat4& GetProjectionMatrix()					{ return Get(sg_projectionMatrix); }
-	void PushProjectionMatrix(const glm::mat4 a_data)		{ Push(sg_projectionMatrix, a_data); }
+	void PushProjectionMatrix(const glm::mat4& a_data)		{ Push(sg_projectionMatrix, a_data); }
 	glm::mat4 PopProjectionMatrix()							{ return Pop(sg_projectionMatrix); }
-	glm::mat4 SwapProjectionMatrix(const glm::mat4 a_data)	{ return Swap(sg_projectionMatrix, a_data); }
+	glm::mat4 SwapProjectionMatrix(const glm::mat4& a_data)	{ return Swap(sg_projectionMatrix, a_data); }
 
 	const glm::mat4& GetViewMatrix()					{ return Get(sg_viewMatrix); }
-	void PushViewMatrix(const glm::mat4 a_data)			{ Push(sg_viewMatrix, a_data); }
+	void PushViewMatrix(const glm::mat4& a_data)			{ Push(sg_viewMatrix, a_data); }
 	glm::mat4 PopViewMatrix()							{ return Pop(sg_viewMatrix); }
-	glm::mat4 SwapViewMatrix(const glm::mat4 a_data)	{ return Swap(sg_viewMatrix, a_data); }
+	glm::mat4 SwapViewMatrix(const glm::mat4& a_data)	{ return Swap(sg_viewMatrix, a_data); }
 
 
 	//
@@ -161,23 +166,23 @@ namespace Engine
 
 	static void Act(ActionSet& a_set)
 	{
-		for each (Action* action in a_set)
-			action();
+		for (Action* action : a_set)
+			(*action)();
 	}
 	static void StartActions()		{ Act(sg_startActions); }
 	static void UpdateActions()		{ Act(sg_updateActions); }
 	static void DrawActions()		{ Act(sg_drawActions); }
 	static void StopActions()		{ Act(sg_stopActions); }
 
-	static void Register(ActionSet& a_set, Action a_action)
+	static void Register(ActionSet& a_set, Action& a_action)
 	{
-		if (0 == a_set.count(a_action))
-			a_set.insert(a_action);
+		if (0 == a_set.count(&a_action))
+			a_set.insert(&a_action);
 	}
-	static void Deregister(ActionSet& a_set, Action a_action)
+	static void Deregister(ActionSet& a_set, Action& a_action)
 	{
-		if (0 < a_set.count(a_action))
-			a_set.erase(a_action);
+		if (0 < a_set.count(&a_action))
+			a_set.erase(&a_action);
 	}
 
 	static ActionSet& GetSet(Phase a_phase)
@@ -187,17 +192,17 @@ namespace Engine
 				STOP_PHASE == a_phase ? sg_stopActions :
 				sg_updateActions);
 	}
-	void RegisterAction(Phase a_phase, Action a_action)		{ Register(GetSet(a_phase), a_action); }
-	void DeregisterAction(Phase a_phase, Action a_action)	{ Deregister(GetSet(a_phase), a_action); }
+	void RegisterAction(Phase a_phase, Action& a_action)	{ Register(GetSet(a_phase), a_action); }
+	void DeregisterAction(Phase a_phase, Action& a_action)	{ Deregister(GetSet(a_phase), a_action); }
 
-	void RegisterStartAction(Action a_action)		{ Register(sg_startActions, a_action); }
-	void DeregisterStartAction(Action a_action)		{ Deregister(sg_startActions, a_action); }
-	void RegisterUpdateAction(Action a_action)		{ Register(sg_updateActions, a_action); }
-	void DeregisterUpdateAction(Action a_action)	{ Deregister(sg_updateActions, a_action); }
-	void RegisterDrawAction(Action a_action)		{ Register(sg_drawActions, a_action); }
-	void DeregisterDrawAction(Action a_action)		{ Deregister(sg_drawActions, a_action); }
-	void RegisterStopAction(Action a_action)		{ Register(sg_stopActions, a_action); }
-	void DeregisterStopAction(Action a_action)		{ Deregister(sg_stopActions, a_action); }
+	void RegisterStartAction(Action& a_action)		{ Register(sg_startActions, a_action); }
+	void DeregisterStartAction(Action& a_action)	{ Deregister(sg_startActions, a_action); }
+	void RegisterUpdateAction(Action& a_action)		{ Register(sg_updateActions, a_action); }
+	void DeregisterUpdateAction(Action& a_action)	{ Deregister(sg_updateActions, a_action); }
+	void RegisterDrawAction(Action& a_action)		{ Register(sg_drawActions, a_action); }
+	void DeregisterDrawAction(Action& a_action)		{ Deregister(sg_drawActions, a_action); }
+	void RegisterStopAction(Action& a_action)		{ Register(sg_stopActions, a_action); }
+	void DeregisterStopAction(Action& a_action)		{ Deregister(sg_stopActions, a_action); }
 
 	//
 	// RUN
@@ -233,6 +238,18 @@ namespace Engine
 
 		// set window resize callback
 		glfwSetWindowSizeCallback(GetWindow(), [](GLFWwindow*, int w, int h){ glViewport(0, 0, w, h); });
+
+		// set the clear colour and enable depth testing and backface culling
+		glClearColor(0, 0, 0, 1);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+
+		// load shader
+		if (!Renderer::LoadShader())
+		{
+			glfwTerminate();
+			return false;
+		}
 
 		// reset timer
 		ResetTime();
@@ -270,7 +287,7 @@ namespace Engine
 		glfwPollEvents();
 
 		// quit if window is closed or there are no actions to take
-		if (0 == glfwWindowShouldClose(GetWindow()) || !HasUpdateActions())
+		if (0 != glfwWindowShouldClose(GetWindow()) || !HasUpdateActions())
 			Quit();
 	}
 
@@ -290,6 +307,9 @@ namespace Engine
 	{
 		// do stop actions
 		StopActions();
+
+		// destroy shader
+		Renderer::DestroyShader();
 
 		// terminate
 		glfwTerminate();

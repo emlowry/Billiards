@@ -27,7 +27,7 @@ bool Scene::DestroyActor(Actor* a_actor)	// returns false if actor not in scene
 
 void Scene::Update()
 {
-	float time = Engine::GetElapsedTime();
+	double time = Engine::GetElapsedTime();
 	while (time - m_lastUpdate >= m_timeStep)
 	{
 		// standard physics update
@@ -47,8 +47,8 @@ void Scene::Update()
 	}
 }
 
-void Scene::Draw() const
+void Scene::QueueMeshes() const
 {
 	for (auto actor : m_actors)
-		actor->Draw();
+		actor->QueueMesh();
 }

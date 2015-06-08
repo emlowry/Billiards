@@ -1,4 +1,6 @@
-#pragma once
+#ifndef _MESH_H_
+#define _MESH_H_
+
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
@@ -21,13 +23,19 @@ struct Mesh
 	unsigned int vertexArrayID;
 	unsigned int vertexBufferID;
 	unsigned int indexBufferID;
+	unsigned int indexCount;
 
+	Mesh() : vertexArrayID(0), vertexBufferID(0), indexBufferID(0), indexCount(0) {}
 	Mesh(Vertex* a_vertices, unsigned int a_vertexCount);
 	Mesh(Vertex* a_vertices, unsigned int a_vertexCount,
 		 unsigned int* a_indices, unsigned int a_indexCount);
+
+	void Destroy();
 
 	static Mesh GenerateCubeMesh();
 	static Mesh GenerateGridMesh(float a_tileSize = 1, unsigned int a_tiles = 20);
 	static Mesh GenerateSphereMesh(unsigned int a_rows = 8) { return GenerateSphereMesh(a_rows, a_rows * 2); }
 	static Mesh GenerateSphereMesh(unsigned int a_rows, unsigned int a_columns);
 };
+
+#endif	// _MESH_H_

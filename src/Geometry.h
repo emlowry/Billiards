@@ -1,4 +1,6 @@
-#pragma once
+#ifndef _GEOMETRY_H_
+#define _GEOMETRY_H_
+
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <vector>
@@ -43,17 +45,6 @@ public:
 	struct Box;
 	struct Sphere;
 
-	struct Texture
-	{
-		glm::vec4 color;
-		float gloss;
-		int imageID;
-		Texture(const glm::vec4 a_color = glm::vec4(1), float a_gloss = 0.5f)
-			: imageID(-1), color(a_color), gloss(a_gloss) {}
-		Texture(int a_imageID, const glm::vec4 a_color = glm::vec4(1), float a_gloss = 0.5f)
-			: imageID(a_imageID), color(a_color), gloss(a_gloss) {}
-	};
-
 	// static functions
 	static void Rotation(glm::quat& a_orientation,
 						 const glm::vec3& a_rotation = glm::vec3(0));
@@ -81,6 +72,7 @@ public:
 	virtual bool Contains(const glm::vec3& a_point) const = 0;
 	virtual float volume() const = 0;
 	virtual float area() const = 0;
+	virtual glm::vec3 scale() const = 0;
 	virtual glm::mat3 interiaTensorDividedByMass() const = 0;
 
 	// implemented member functions
@@ -96,6 +88,7 @@ public:
 	glm::vec3 localZAxis() const { return m_rotationMatrix[2].xyz(); }
 	const glm::mat4* rotationMatrix() const { return &m_rotationMatrix; }
 	const glm::quat& orientation() const { return m_orientation; }
+	const glm::mat4 modelMatrix() const { return glm::translate(position) * m_rotationMatrix * glm::scale(scale()); }
 	void orientation(const glm::quat& a_orientation);
 	void orientation(const glm::vec3& a_rotation);
 	void orientation(float a_angle, glm::vec3& a_axis = glm::vec3(0, 0, 1));
@@ -143,3 +136,5 @@ private:
 };
 
 #include "Geometry_Shapes.h"
+
+#endif	// _GEOMETRY_H_
